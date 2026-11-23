@@ -51,3 +51,32 @@ def ci_and_coverage_ratio(all_sims_df, true_volatility, alpha=0.05):
     inside = (true_volatility >= lower_ci) & (true_volatility <= upper_ci)
     coverage = inside.mean()
     return coverage, lower_ci, upper_ci
+
+def true_volatility_calculate(params_gaussian, params_student_t, mixture_weight_gaussian):
+    """
+    Compute the true volatility
+
+    Input:
+    - params_gaussian (list) = Parameters used for the Gaussian distribution in the simulation
+    - params_student_t (list) = Parameters used for the Student-t distribution in the simulation
+    - mixture_weight_gaussian (int) = Mixture weight assigned to the Gaussian distribution, in the simulation
+
+    Output:
+    - volatility (int) = final true volatility
+    """
+    mu1, sigma_squared_1 = params_gaussian
+    mu2, sigma_squared_2, df = params_student_t
+    
+    w_1 = mixture_weight_gaussian
+    w_2 = 1 - w_1
+
+    overall_mean = (w_1*mu1) + (w_2*mu2)
+
+    component1 = w_1 * sigma_squared_1
+    component2 = w_2 * ((df/(df - 2))*sigma_squared_2)
+    component3 = overall_mean**2
+
+    variance = component1 + component2 + component3
+    volatility = np.sqrt(variance)
+
+    return volatility
