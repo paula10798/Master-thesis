@@ -218,3 +218,117 @@ print("RPV estimator with r = 3:")
 print("Bias:", bias_rpv_r3)
 print("RMSE:", rmse_rpv_r3)
 print("Coverage ratio:", coverage_rpv_r3)
+
+
+
+##############################
+# Simulating Weekend Returns #
+##############################
+
+print("----------------------------------")
+print('For Weekend returns, we simulate the Mixture model with Student-t and Gaussian distributions')
+
+
+N = 1000        # Number of observations
+M = 1000        # Number of simulations
+p_G = 0.6       # Mixture weight for Gaussian
+phi1 = 0.7      # AR(1) coefficient for Gaussian
+phi2 = 0.3      # AR(1) coefficient for Student-t
+
+# Gaussian component parameters
+mu_G, sigma_G = 0, 1
+params_gaussian = [mu_G, sigma_G]
+
+# Student-t component parameters
+mu_T, sigma_T, df_T = 0, 1.5, 5
+params_t = [mu_T, sigma_T, df_T]
+
+mixture_simulations = np.zeros((M, N))
+components = np.zeros((M, N), dtype=int)
+
+for m in range(M):
+    mixture_simulations[m, 0] = np.random.normal()
+    for t in range(1, N):
+        # Choose component
+        if np.random.rand() < p_G:
+            components[m, t] = 0
+            noise = np.random.normal(mu_G, sigma_G)
+            mixture_simulations[m, t] = noise
+        else:
+            components[m, t] = 1
+            noise = t_dist.rvs(df_T, loc=mu_T, scale=sigma_T)
+            mixture_simulations[m, t] = noise
+            
+mixture_simulations_df = pd.DataFrame(mixture_simulations)
+
+print('We now display the simulated Mixture model for the first 5 simulations')
+plt.figure(figsize=(12, 5))
+for i in range(5):
+    plt.plot(mixture_simulations[i], label=f'Sim {i+1}')
+plt.title('Mixture Model Process, First 5 Simulations')
+plt.xlabel('Time step')
+plt.ylabel('Log-return $(r_t)$')
+plt.legend()
+plt.show()
+    
+# Estimates for RV
+
+estimator1_df_mixture = pd.DataFrame({
+    col: RV_estimator(mixture_simulations_df[col]) for col in mixture_simulations_df.columns
+    })
+
+
+# Estimates for RPV with r = 0.5
+
+r05_RPV = 0.5
+
+estimator3_df_mixture = pd.DataFrame({
+    col: RPV_estimator(mixture_simulations_df[col], r05_RPV) for col in mixture_simulations_df.columns
+    })
+
+# Estimates for RPV with r = 3
+
+r3_RPV = 3
+
+estimator4_df_mixture = pd.DataFrame({
+    col: RPV_estimator(mixture_simulations_df[col], r3_RPV) for col in mixture_simulations_df.columns
+    })
+
+# Calculating true volatility
+true_volatility_mixture = true_volatility_calculate(params_gaussian, params_t, p_G)
+
+print('-------------------')
+# For RV
+estimates1_rv = estimator1_df_mixture.mean(axis=1).values
+bias1_rv = bias(estimates1_rv, true_volatility_mixture)
+rmse1_rv = RMSE(estimates1_rv, true_volatility_mixture)
+coverage1_rv, lower_ci1_rv, upper_ci1_rv = ci_and_coverage_ratio(estimator1_df_mixture, true_volatility_mixture)
+
+print("RV estimator:")
+print("Bias:", bias1_rv)
+print("RMSE:", rmse1_rv)
+print("Coverage ratio:", coverage1_rv)
+
+print('-------------------')
+# For RPV estimator with r = 3
+estimates1_rpv_r3 = estimator4_df_mixture.mean(axis=1).values
+bias1_rpv_r3 = bias(estimates1_rpv_r3, true_volatility_mixture)
+rmse1_rpv_r3 = RMSE(estimates1_rpv_r3, true_volatility_mixture)
+coverage1_rpv_r3, lower_ci1_rpv_r3, upper_ci1_rpv_r3 = ci_and_coverage_ratio(estimator4_df_mixture, true_volatility_mixture)
+
+print("RPV estimator with r = 3:")
+print("Bias:", bias1_rpv_r3)
+print("RMSE:", rmse1_rpv_r3)
+print("Coverage ratio:", coverage1_rpv_r3)
+
+print('-------------------')
+# For RPV estimator with r = 0.5
+estimates1_rpv_r05 = estimator3_df_mixture.mean(axis=1).values
+bias1_rpv_r05 = bias(estimates1_rpv_r05, true_volatility_mixture)
+rmse1_rpv_r05 = RMSE(estimates1_rpv_r05, true_volatility_mixture)
+coverage1_rpv_r05, lower_ci1_rpv_r05, upper_ci1_rpv_r05 = ci_and_coverage_ratio(estimator3_df_mixture, true_volatility_mixture)
+
+print("RPV estimator with r = 0.5:")
+print("Bias:", bias1_rpv_r05)
+print("RMSE:", rmse1_rpv_r05)
+print("Coverage ratio:", coverage1_rpv_r05)
