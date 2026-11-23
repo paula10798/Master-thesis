@@ -227,3 +227,220 @@ print("RMSE:", rmse_bv_r1s3)
 print("Coverage ratio:", coverage_bv_r1s3)
 
 print('------------------------------')
+
+
+from thesis.simulation.mjd import MJD_process
+
+# BUSY PERIOD - (Merton Jump Diffusion Process)
+print('Simulating the Busy environment (MJD)...')
+print('-----------')
+
+mu = 0.05
+r = 0.01 
+sigma_b = 0.7 
+lam = 30 
+m = 0 
+delta = 0.1
+n = ((85*7) * 252) 
+T = 1
+r0 = 100
+M = 1000 # Number of simulations
+
+rt_b = np.zeros((n+1, M))
+for sim in range(M):
+    rt_b[:, sim] = MJD_process(r0, r, mu, sigma_b, lam, T, m, delta, n)
+
+print('Plotting the price paths for the MJD process')
+price_simu = rt_b
+time_axis = np.linspace(0, T, n + 1)
+plt.figure(figsize=(10, 5))
+plt.step(time_axis, price_simu, where='post')
+plt.xlabel('Years $(t)$')
+plt.ylabel('Price $(P_t)$')
+plt.title('Merton Jump Diffusion Process Simulation')
+plt.grid(True)
+plt.show()
+
+time_b = np.linspace(0, T, n+1)
+tt_b = np.full(shape=(M, n+1), fill_value=time_b).T
+
+merged = np.column_stack([time_b, rt_b])
+column_names = ['time'] + [f'sim_{i+1}' for i in range(M)]
+simulation_busy_tick = pd.DataFrame(merged, columns=column_names)
+
+sim_col = 'sim_1'
+ohlc_sim1_busy = compute_ohlc_for_sim(simulation_busy_tick, sim_col)
+
+
+# To do this for all simulations:
+ohlc_dict_busy = {}
+sim_cols = [col for col in simulation_busy_tick.columns if col.startswith('sim_')]
+for sim_col in sim_cols:
+    ohlc_dict_busy[sim_col] = compute_ohlc_for_sim(simulation_busy_tick, sim_col)
+
+print('--------------------------')
+
+#------------------------#
+# Computing volatility estimates, using simulated data
+#------------------------#
+
+# Estimates for simple OK
+
+OK_simple_intraday_simulated_busy = {}
+for sim, ohlc_df_busy in ohlc_dict_busy.items():
+    vol_est = OK_estimator(ohlc_df_busy['high'], ohlc_df_busy['low'],
+                           ohlc_df_busy['close'], ohlc_df_busy['open'],
+                           interval_per_year_5min)
+    OK_simple_intraday_simulated_busy[sim] = vol_est
+
+all_OK_simple_df = pd.concat(
+    [df.rename(columns={df.columns[0]: sim}) for sim, df in OK_simple_intraday_simulated_busy.items()],
+    axis=1
+)
+
+average_OK_simple_busy = all_OK_simple_df.mean(axis=1)
+average_OK_simple_busy_df = average_OK_simple_busy.to_frame(name="average_OK_simple")
+
+
+# Estimates for OK BV r=s=0.5
+
+OK_BV_r05s05_intraday_simulated_busy = {}
+for sim, ohlc_df_busy in ohlc_dict_busy.items():
+    vol_est = OK_BV_intraday(ohlc_df_busy['high'], ohlc_df_busy['low'],
+                             ohlc_df_busy['close'], ohlc_df_busy['open'],
+                             -0.163480, 0.391136,
+                             0.5, 0.5, interval_per_year_5min)
+    OK_BV_r05s05_intraday_simulated_busy[sim] = vol_est
+
+all_OK_BV_r05s05_df = pd.concat(
+    [df.rename(columns={df.columns[0]: sim}) for sim, df in OK_BV_r05s05_intraday_simulated_busy.items()],
+    axis=1
+)
+
+average_OK_BV_r05s05_busy = all_OK_BV_r05s05_df.mean(axis=1)
+average_OK_BV_r05s05_busy_df = average_OK_BV_r05s05_busy.to_frame(name="average_OK_BV")
+
+## For OK BV r =2 and s = 1
+
+OK_BV_r2s1_intraday_simulated_busy = {}
+for sim, ohlc_df_busy in ohlc_dict_busy.items():
+    vol_est = OK_BV_intraday(ohlc_df_busy['high'], ohlc_df_busy['low'],
+                             ohlc_df_busy['close'], ohlc_df_busy['open'],
+                             -0.032097, 0.032459,
+                             2, 1, interval_per_year_5min)
+    OK_BV_r2s1_intraday_simulated_busy[sim] = vol_est
+
+all_OK_BV_r2s1_df = pd.concat(
+    [df.rename(columns={df.columns[0]: sim}) for sim, df in OK_BV_r2s1_intraday_simulated_busy.items()],
+    axis=1
+)
+
+average_OK_BV_r2s1_busy = all_OK_BV_r2s1_df.mean(axis=1)
+average_OK_BV_r2s1_busy_df = average_OK_BV_r2s1_busy.to_frame(name="average_OK_BV")
+
+## For OK BV r = 3 and s = 1
+
+OK_BV_r3s1_intraday_simulated_busy = {}
+for sim, ohlc_df_busy in ohlc_dict_busy.items():
+    vol_est = OK_BV_intraday(ohlc_df_busy['high'], ohlc_df_busy['low'],
+                             ohlc_df_busy['close'], ohlc_df_busy['open'],
+                             -0.006871, 0.007464,
+                             3, 1, interval_per_year_5min)
+    OK_BV_r3s1_intraday_simulated_busy[sim] = vol_est
+
+all_OK_BV_r3s1_df = pd.concat(
+    [df.rename(columns={df.columns[0]: sim}) for sim, df in OK_BV_r3s1_intraday_simulated_busy.items()],
+    axis=1
+)
+
+average_OK_BV_r3s1_busy = all_OK_BV_r3s1_df.mean(axis=1)
+average_OK_BV_r3s1_busy_df = average_OK_BV_r3s1_busy.to_frame(name="average_OK_BV")
+
+
+## For OK BV r = 1 and s = 3
+
+OK_BV_r1s3_intraday_simulated_busy = {}
+for sim, ohlc_df_busy in ohlc_dict_busy.items():
+    vol_est = OK_BV_intraday(ohlc_df_busy['high'], ohlc_df_busy['low'],
+                             ohlc_df_busy['close'], ohlc_df_busy['open'],
+                             -0.010443, 0.008298,
+                             1, 3, interval_per_year_5min)
+    OK_BV_r1s3_intraday_simulated_busy[sim] = vol_est
+
+all_OK_BV_r1s3_df = pd.concat(
+    [df.rename(columns={df.columns[0]: sim}) for sim, df in OK_BV_r1s3_intraday_simulated_busy.items()],
+    axis=1
+)
+
+average_OK_BV_r1s3_busy = all_OK_BV_r1s3_df.mean(axis=1)
+average_OK_BV_r1s3_busy_df = average_OK_BV_r1s3_busy.to_frame(name="average_OK_BV")
+
+
+#-------------------------#
+# Evaluating the performance of estimators
+#-------------------------#
+
+true_volatility = sigma_b
+
+print('We are now evaluating the performance under the Busy environment')
+print('-------------------')
+# For OK_simple
+estimates_simple = average_OK_simple_busy_df['average_OK_simple'].values
+bias_simple = bias(estimates_simple, true_volatility)
+rmse_simple = RMSE(estimates_simple, true_volatility)
+coverage_simple, lower_ci_simple, upper_ci_simple = ci_and_coverage_ratio(all_OK_simple_df, true_volatility)
+
+print("OK_simple estimator:")
+print("Bias:", bias_simple)
+print("RMSE:", rmse_simple)
+print("Coverage ratio:", coverage_simple)
+
+print('-------------------')
+# For OK BV r=s=0.5
+estimates_bv_r05s05 = average_OK_BV_r05s05_busy_df['average_OK_BV'].values
+bias_bv_r05s05 = bias(estimates_bv_r05s05, true_volatility)
+rmse_bv_r05s05 = RMSE(estimates_bv_r05s05, true_volatility)
+coverage_bv_r05s05, lower_ci_bv_r05s05, upper_ci_bv_r05s05 = ci_and_coverage_ratio(all_OK_BV_r05s05_df, true_volatility)
+
+print("OK_BV r05s05 estimator:")
+print("Bias:", bias_bv_r05s05)
+print("RMSE:", rmse_bv_r05s05)
+print("Coverage ratio:", coverage_bv_r05s05)
+
+print('--------------------')
+# For OK BV r=2 and s=1
+estimates_bv_r2s1 = average_OK_BV_r2s1_busy_df['average_OK_BV'].values
+bias_bv_r2s1 = bias(estimates_bv_r2s1, true_volatility)
+rmse_bv_r2s1 = RMSE(estimates_bv_r2s1, true_volatility)
+coverage_bv_r2s1, lower_ci_bv_r2s1, upper_ci_bv_r2s1 = ci_and_coverage_ratio(all_OK_BV_r2s1_df, true_volatility)
+
+print("OK_BV r2s1 estimator:")
+print("Bias:", bias_bv_r2s1)
+print("RMSE:", rmse_bv_r2s1)
+print("Coverage ratio:", coverage_bv_r2s1)
+
+print('---------------------')
+# For OK BV r=3 and s=1
+estimates_bv_r3s1 = average_OK_BV_r3s1_busy_df['average_OK_BV'].values
+bias_bv_r3s1 = bias(estimates_bv_r3s1, true_volatility)
+rmse_bv_r3s1 = RMSE(estimates_bv_r3s1, true_volatility)
+coverage_bv_r3s1, lower_ci_bv_r3s1, upper_ci_bv_r3s1 = ci_and_coverage_ratio(all_OK_BV_r3s1_df, true_volatility)
+
+print("OK_BV r3s1 estimator:")
+print("Bias:", bias_bv_r3s1)
+print("RMSE:", rmse_bv_r3s1)
+print("Coverage ratio:", coverage_bv_r3s1)
+
+print('---------------------')
+# For OK BV r=1 and s=3
+estimates_bv_r1s3 = average_OK_BV_r1s3_busy_df['average_OK_BV'].values
+bias_bv_r1s3 = bias(estimates_bv_r1s3, true_volatility)
+rmse_bv_r1s3 = RMSE(estimates_bv_r1s3, true_volatility)
+coverage_bv_r1s3, lower_ci_bv_r1s3, upper_ci_bv_r1s3 = ci_and_coverage_ratio(all_OK_BV_r1s3_df, true_volatility)
+
+print("OK_BV r1s3 estimator:")
+print("Bias:", bias_bv_r1s3)
+print("RMSE:", rmse_bv_r1s3)
+print("Coverage ratio:", coverage_bv_r1s3)
+
+print('-----------------------------------')
